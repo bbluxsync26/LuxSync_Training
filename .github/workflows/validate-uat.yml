@@ -1,0 +1,34 @@
+name: Validate UAT site
+
+on:
+  push:
+    branches: ["uat"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Validate site entry point
+        shell: bash
+        run: |
+          test -s index.html
+          grep -qi '</script>' index.html
+          grep -qi '</body>' index.html
+          grep -qi '</html>' index.html
+          if grep -q 'element content stripped' index.html; then
+            echo 'A stripped-content marker remains in index.html'
+            exit 1
+          fi
+      - name: Upload UAT artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: luxsync-training-uat
+          path: |
+            index.html
+            .nojekyll
