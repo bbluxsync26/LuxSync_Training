@@ -1,0 +1,16 @@
+name = "luxsync-training-progress"
+main = "src/index.js"
+compatibility_date = "2026-11-04"
+workers_dev = false
+
+[[d1_databases]]
+binding = "DB"
+database_name = "luxsync-training"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+[[routes]]
+pattern = "luxsync.xyz/api/*"
+zone_name = "luxsync.xyz"
+
+[observability]
+enabled = true
