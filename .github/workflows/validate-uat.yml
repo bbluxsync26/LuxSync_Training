@@ -14,21 +14,61 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
       - name: Validate site entry point
         shell: bash
         run: |
           test -s index.html
+          test -s progress-client.js
           grep -qi '</script>' index.html
           grep -qi '</body>' index.html
           grep -qi '</html>' index.html
+          grep -q '<script src="progress-client.js"></script>' index.html
           if grep -q 'element content stripped' index.html; then
             echo 'A stripped-content marker remains in index.html'
             exit 1
           fi
+
+      - name: Validate JavaScript
+        shell: bash
+        run: |
+          node --check progress-client.js
+          node --input-type=module --check < cloudflare/src/index.js
+
+      - name: Validate D1 schema
+        shell: bash
+        run: |
+          python - <<'PY'
+          import sqlite3
+          from pathlib import Path
+          schema = Path("cloudflare/schema.sql").read_text(encoding="utf-8")
+          connection = sqlite3.connect(":memory:")
+          connection.executescript(schema)
+          tables = {
+              row[0]
+              for row in connection.execute(
+                  "SELECT name FROM sqlite_master WHERE type='table'"
+              )
+          }
+          required = {
+              "users",
+              "user_progress",
+              "daily_activity",
+              "quiz_attempts",
+              "simulator_attempts",
+          }
+          missing = required - tables
+          if missing:
+              raise SystemExit(f"Missing D1 tables: {sorted(missing)}")
+          print("D1 schema validated")
+          PY
+
       - name: Upload UAT artifact
         uses: actions/upload-artifact@v4
         with:
           name: luxsync-training-uat
           path: |
             index.html
+            progress-client.js
+            cloudflare/
             .nojekyll
